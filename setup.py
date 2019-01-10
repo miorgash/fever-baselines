@@ -45,7 +45,7 @@ setup(
               'fever.retrieval',
               'fever.rte',
               'fever.rte.parikh',
-              'fever.rte.riedel'
+              'fever.rte.riedel',
               'fever.scripts',
               'fever.scripts.dataset',
               'fever.scripts.manual_evaluation',
