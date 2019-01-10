@@ -17,7 +17,7 @@ setup(
     license=license,
     python_requires='>=3.6',
     package_dir={'fever': 'src'},
-    packages=['fever'],
+    packages=['fever', 'fever.common', 'fever.common.dataset','fever.common.features','fever.common.framework','fever.common.training','fever.common.util', 'fever.retrieval','fever.rte','fever.rte.parikh','fever.rte.riedel'],
     install_requires=install,
     dependency_links=depends,
 )
