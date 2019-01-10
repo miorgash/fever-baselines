@@ -11,7 +11,7 @@ depends = [req.replace("git+git://","git+http://") for req in reqs if req.starts
 
 setup(
     name='fever-baselines',
-    version='1.0.2',
+    version='1.0.3',
     description='Fact Extraction and VERification baseline implementation',
     long_description="readme",
     license=license,
@@ -31,7 +31,10 @@ setup(
                  'fever.scripts.dataset':'src/scripts/dataset',
                  'fever.scripts.manual_evaluation':'src/scripts/manual_evaluation',
                  'fever.scripts.retrieval':'src/scripts/retrieval',
-                 'fever.scripts.rte':'src/scripts/rte'},
+                 'fever.scripts.rte':'src/scripts/rte',
+                 'fever.scripts.rte.da':'src/scripts/rte/da',
+                 'fever.scripts.rte.mlp':'src/scripts/rte/mlp'}
+                 
     packages=['fever', 
               'fever.common', 
               'fever.common.dataset',
@@ -47,7 +50,10 @@ setup(
               'fever.scripts.dataset',
               'fever.scripts.manual_evaluation',
               'fever.scripts.retrieval',
-              'fever.scripts.rte'],
+              'fever.scripts.rte',
+              'fever.scripts.rte.da',
+              'fever.scripts.rte.mlp'
+             ],
     install_requires=install,
     dependency_links=depends,
 )
