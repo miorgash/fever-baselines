@@ -33,7 +33,7 @@ setup(
                  'fever.scripts.retrieval':'src/scripts/retrieval',
                  'fever.scripts.rte':'src/scripts/rte',
                  'fever.scripts.rte.da':'src/scripts/rte/da',
-                 'fever.scripts.rte.mlp':'src/scripts/rte/mlp'}
+                 'fever.scripts.rte.mlp':'src/scripts/rte/mlp'},
                  
     packages=['fever', 
               'fever.common', 
