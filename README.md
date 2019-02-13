@@ -1,3 +1,7 @@
+# fever2018-retrieval
+
+This repository contains the baseline FEVER system (original README text below), with its retrieval system modified to support additional strategies based on named entity recognition.  This retrieval component is used in the [NEC Labs America](http://www.nec-labs.com) Team Papelo [FEVER 2018 system](https://www.github.com/necla-ml/fever2018).
+
 # Fact Extraction and VERification
 
 This is the PyTorch implementation of the FEVER pipeline baseline described in the NAACL2018 paper: [FEVER: A large-scale dataset for Fact Extraction and VERification.]()
