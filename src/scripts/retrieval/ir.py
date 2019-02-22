@@ -43,6 +43,7 @@ if __name__ == "__main__":
     parser.add_argument('--out-file', type=str, help='path to save output dataset')
     parser.add_argument('--max-page',type=int)
     parser.add_argument('--max-sent',type=int)
+    parser.add_argument('--whole-docs', action='store_true')
     parser.add_argument('--parallel',type=str2bool,default=True)
     args = parser.parse_args()
 
@@ -50,7 +51,7 @@ if __name__ == "__main__":
     jlr = JSONLineReader()
     formatter = FEVERGoldFormatter(set(), FEVERLabelSchema())
 
-    method = TopNDocsTopNSents(db, args.max_page, args.max_sent, args.model)
+    method = TopNDocsTopNSents(db, args.max_page, args.max_sent, args.whole_docs, args.model)
 
 
     processed = dict()

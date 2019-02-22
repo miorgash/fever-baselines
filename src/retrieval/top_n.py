@@ -15,10 +15,11 @@ class TopNDocsTopNSents(RetrievalMethod):
             self.tokenizer = "simple"
             self.num_workers = None
 
-    def __init__(self,db,n_docs,n_sents,model):
+    def __init__(self,db,n_docs,n_sents,whole_docs,model):
         super().__init__(db)
         self.n_docs = n_docs
         self.n_sents = n_sents
+        self.whole_docs = whole_docs
         self.ranker = retriever.get_class('tfidf')(tfidf_path=model)
         self.onlineranker_args = self.RankArgs()
 
@@ -59,7 +60,8 @@ class TopNDocsTopNSents(RetrievalMethod):
             lines = [line.split("\t")[1] if len(line.split("\t")) > 1 else "" for line in
                      lines.split("\n")]
 
-            lines = lines[:50]
+            if self.whole_docs:
+                lines = lines[:self.n_sents]
 
             p_lines.extend(zip(lines, [page] * len(lines), range(len(lines))))
             if(len(lines) > 0):
@@ -83,14 +85,17 @@ class TopNDocsTopNSents(RetrievalMethod):
                 "modified_sentence": "[ " + title + " ] " + p_line[0]
             })
 
-        # scores = self.tf_idf_sim(claim_text, lines)
+        if self.whole_docs:
+            return [(s["page"], s["line_on_page"]) for s in lines]
 
-        # if(len(scores) == 0):
-        #     scores = first_lines   # in case TFIDF fails to pick sentences
+        else:
+            scores = self.tf_idf_sim(claim_text, lines)
 
-        # if include_text:
-        #     return scores
+            if(len(scores) == 0):
+                scores = first_lines   # in case TFIDF fails to pick sentences
 
-        # return [(s["page"], s["line_on_page"]) for s in scores]
-        return [(s["page"], s["line_on_page"]) for s in lines]
+            if include_text:
+                return scores
+
+            return [(s["page"], s["line_on_page"]) for s in scores]
 
