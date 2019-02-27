@@ -15,11 +15,12 @@ class TopNDocsTopNSents(RetrievalMethod):
             self.tokenizer = "simple"
             self.num_workers = None
 
-    def __init__(self,db,n_docs,n_sents,whole_docs,model):
+    def __init__(self,db,n_docs,n_sents,whole_docs,compat,model):
         super().__init__(db)
         self.n_docs = n_docs
         self.n_sents = n_sents
         self.whole_docs = whole_docs
+        self.compat = compat
         self.ranker = retriever.get_class('tfidf')(tfidf_path=model)
         self.onlineranker_args = self.RankArgs()
 
@@ -91,7 +92,7 @@ class TopNDocsTopNSents(RetrievalMethod):
         else:
             scores = self.tf_idf_sim(claim_text, lines)
 
-            if(len(scores) == 0):
+            if(len(scores) == 0 and self.compat == False):
                 scores = first_lines   # in case TFIDF fails to pick sentences
 
             if include_text:
