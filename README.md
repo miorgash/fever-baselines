@@ -46,7 +46,7 @@ To train the Decomposable Attention models, it is highly recommended to use a GP
 Download and run the latest FEVER. 
 
     docker volume create fever-data
-    docker run -it -v fever-data:/fever/data sheffieldnlp/fever-baselines
+    docker run -it --name fever-trial -v fever-data:/fever/data miorgash/fever-baselines:latest
     
 To enable GPU acceleration (run with `--runtime=nvidia`) once [NVIDIA Docker has been installed](https://github.com/NVIDIA/nvidia-docker)
  
