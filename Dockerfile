@@ -1,4 +1,4 @@
-FROM continuumio/miniconda3
+FROM continuumio/miniconda3:4.5.11
 
 ENTRYPOINT ["/bin/bash"]
 
@@ -31,14 +31,15 @@ RUN apt-get install -y --no-install-recommends \
     man-db \
     autoconf \
     pkg-config \
-    unzip
+    unzip \
+    libpq-dev \
+    python3-dev
 
 RUN conda update -q conda
 RUN conda info -a
-RUN conda create -q -n fever python=3.6
 
 WORKDIR /fever/
-RUN . activate fever
-RUN conda install -y pytorch=0.3.1 torchvision -c pytorch
+RUN conda install python==3.6.5
+RUN conda install -y pytorch=0.4.1 torchvision -c pytorch
 RUN pip install -r requirements.txt
 RUN python src/scripts/prepare_nltk.py
