@@ -33,7 +33,9 @@ RUN apt-get install -y --no-install-recommends \
     pkg-config \
     unzip \
     libpq-dev \
-    python3-dev
+    python3-dev \
+    vim \
+    tree
 
 RUN conda update -q conda
 RUN conda info -a
