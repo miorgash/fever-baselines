@@ -1,3 +1,121 @@
+# Commands
+## Execution(english)
+
+```
+sudo docker run -it --name fever -v fever-data:/fever/data sheffieldnlp/fever-baselines
+# Todo: データコンテナを experiment ごとに作成．それをマウントする experiment ごとのコンテナも作成．
+```
+
+```
+# Train
+# create db and tf-idf matrix
+bash scripts/process-wiki.sh
+
+# Sampling for train
+PYTHONPATH=src python src/scripts/retrieval/document/batch_ir_ns.py --model data/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz --count 1 --split minimum-train
+PYTHONPATH=src python src/scripts/retrieval/document/batch_ir_ns.py --model data/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz --count 1 --split minimum-dev
+
+# Train DA
+export CUDA_DEVICE=-1
+PYTHONPATH=src python src/scripts/rte/da/train_da.py data/fever/fever.db config/fever_nn_ora_sent.json logs/da_nn_sent --cuda-device $CUDA_DEVICE
+mkdir -p data/models
+cp logs/da_nn_sent/model.tar.gz data/models/decomposable_attention.tar.gz
+
+# Predict
+# IR
+PYTHONPATH=src python src/scripts/retrieval/ir.py --db data/fever/fever.db --model data/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz --in-file data/fever-data/minimum-test.jsonl --out-file data/fever/minimum-test.sentences.p5.s5.jsonl --max-page 5 --max-sent 5
+
+# RTE(NLI)
+PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/fever/fever.db data/models/decomposable_attention.tar.gz data/fever/minimum-test.sentences.p5.s5.jsonl  --log logs/decomposable_attention.test.log
+```
+
+## Execution(jp)
+
+
+- 自作コンテナ起動
+
+    ```
+    docker run -it --name fever-trial -v fever-data:/fever/data miorgash/fever-baselines:latest
+    ```
+
+- 自作コンテナ内で実行
+
+    ```
+    # File path
+    
+    # Train
+    # create db and tf-idf matrix
+    bash scripts/process-wiki.sh
+    # TODO: EXP を $1 で受け取るよう修正
+    
+    # Sampling for train
+    # 出力先ファイルをパラメータで設定できるよう batch_ir_ns を改修した
+    SPLIT=train
+    EXP=exp-kurohashi-mini
+    # SPLIT=dev
+    PYTHONPATH=src python src/scripts/retrieval/document/batch_ir_ns.py \
+        --model data/${EXP}/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz \
+        --count 1 \
+        -i data/${EXP}/claim/raw/${SPLIT}.jsonl \
+        -o data/${EXP}/claim/${SPLIT}.ns.pages.p1.jsonl
+    
+    ```
+
+- オリジナルコンテナを起動
+
+    ```
+    sudo docker run -it --name fever -v fever-data:/fever/data sheffieldnlp/fever-baselines
+    # Todo: データコンテナを experiment ごとに作成．それをマウントする experiment ごとのコンテナも作成．
+    ```
+
+- オリジナルコンテナ内で実行
+
+    ```
+    # Train DA
+    # 以降 allennlp==0.4.1 でエラー発生のため `sheffieldnlp/fever-baselines(fever-naacl-2018)` を利用
+    export CUDA_DEVICE=-1
+    EXP=exp-kurohashi-mini
+    PYTHONPATH=src python src/scripts/rte/da/train_da.py data/${EXP}/evidence/fever.db config/fever_nn_ora_sent_kurohashi.json logs/da_nn_sent_kurohashi --cuda-device $CUDA_DEVICE
+    mkdir -p data/${EXP}/models
+    cp logs/da_nn_sent_kurohashi/model.tar.gz data/${EXP}/models/decomposable_attention.tar.gz
+    
+    # Predict
+    PYTHONPATH=src python src/scripts/retrieval/ir.py --db data/${EXP}/evidence/fever.db --model data/${EXP}/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz --in-file data/${EXP}/claim/raw/test.jsonl --out-file data/${EXP}/claim/test.sentences.p5.s5.jsonl --max-page 5 --max-sent 5
+    
+    # RTE(NLI)
+    PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/${EXP}/evidence/fever.db data/${EXP}/models/decomposable_attention.tar.gz data/${EXP}/claim/test.sentences.p5.s5.jsonl  --log logs/decomposable_attention.test.log
+    ```
+
+### Trouble shooting for jp
+
+```
+# Train DA
+# db 構築に用いた evidence の json テキストの文字コードと，batch_ir_ns.py によるサンプリング後の json テキストの文字コードが合致しない場合，
+# RuntimeError: inconsistent tensor size, expected tensor [213 x 300] and src [210 x 300] to have the same number of elements, ... が発生
+
+# [INFO] 2020-08-19 01:13:53,807 - allennlp.training.trainer - Ran out of patience.  Stopping training.
+# https://github.com/benbogin/spider-schema-gnn/issues/5
+# JSON の設定で patience を変更すれば OK
+
+# Predict
+# IR: fever.db のテキストにおいて lines の区切り以外の箇所で \n が入っていると Index エラーが発生する．
+```
+
+# Files
+```
+- download-raw-wiki.sh         # Evidence の JSONL ファイルをダウンロード
++ process-wiki.sh              # Evidence の DB (sqlite) と tfidf を作成
+- download-processed-wiki.sh   # Evidence の DB (sqlite) と tfidf をダウンロード
+- download-data.sh             # Claim(Shared task 用全ファイル)ダウンロード
+- download-shared-task-test.sh # Claim(Shared task 用 test データのみ)ダウンロード
+- download-paper.sh            # Claim(論文データ)ダウンロード
+- download-glove.sh            # GloVe 分散表現ダウンロード
+- download-model.sh            # Model ダウンロード（DA）
+```
+
+---
+Original README.md
+
 # Fact Extraction and VERification
 
 This is the PyTorch implementation of the FEVER pipeline baseline described in the NAACL2018 paper: [FEVER: A large-scale dataset for Fact Extraction and VERification.]()
