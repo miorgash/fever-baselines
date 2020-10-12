@@ -35,7 +35,7 @@ PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/fever/fever.db data/mod
 - 自作コンテナ起動
 
     ```
-    docker run -it --name fever-trial -v fever-data:/fever/data miorgash/fever-baselines:latest
+    docker run -it --name fever-createdb -v fever-data:/fever/data miorgash/fever-baselines:latest
     ```
 
 - 自作コンテナ内で実行
@@ -49,15 +49,14 @@ PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/fever/fever.db data/mod
     # TODO: EXP を $1 で受け取るよう修正
     
     # Sampling for train
-    # 出力先ファイルをパラメータで設定できるよう batch_ir_ns を改修した
+    # 出力先ファイルをパラメータで設定できるよう batch_ir_ns を改修済
     SPLIT=train
-    EXP=exp-kurohashi-mini
     # SPLIT=dev
     PYTHONPATH=src python src/scripts/retrieval/document/batch_ir_ns.py \
-        --model data/${EXP}/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz \
+        --model data/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz \
         --count 1 \
-        -i data/${EXP}/claim/raw/${SPLIT}.jsonl \
-        -o data/${EXP}/claim/${SPLIT}.ns.pages.p1.jsonl
+        -i data/claim/raw/${SPLIT}.jsonl \
+        -o data/claim/${SPLIT}.ns.pages.p1.jsonl
     
     ```
 
@@ -74,16 +73,15 @@ PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/fever/fever.db data/mod
     # Train DA
     # 以降 allennlp==0.4.1 でエラー発生のため `sheffieldnlp/fever-baselines(fever-naacl-2018)` を利用
     export CUDA_DEVICE=-1
-    EXP=exp-kurohashi-mini
-    PYTHONPATH=src python src/scripts/rte/da/train_da.py data/${EXP}/evidence/fever.db config/fever_nn_ora_sent_kurohashi.json logs/da_nn_sent_kurohashi --cuda-device $CUDA_DEVICE
-    mkdir -p data/${EXP}/models
-    cp logs/da_nn_sent_kurohashi/model.tar.gz data/${EXP}/models/decomposable_attention.tar.gz
+    PYTHONPATH=src python src/scripts/rte/da/train_da.py data/evidence/fever.db config/fever_nn_ora_sent_kurohashi.json logs/da_nn_sent_kurohashi --cuda-device $CUDA_DEVICE
+    mkdir -p data/models
+    cp logs/da_nn_sent_kurohashi/model.tar.gz data/models/decomposable_attention.tar.gz
     
     # Predict
-    PYTHONPATH=src python src/scripts/retrieval/ir.py --db data/${EXP}/evidence/fever.db --model data/${EXP}/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz --in-file data/${EXP}/claim/raw/test.jsonl --out-file data/${EXP}/claim/test.sentences.p5.s5.jsonl --max-page 5 --max-sent 5
+    PYTHONPATH=src python src/scripts/retrieval/ir.py --db data/evidence/fever.db --model data/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz --in-file data/claim/raw/test.jsonl --out-file data/claim/test.sentences.p5.s5.jsonl --max-page 5 --max-sent 5
     
     # RTE(NLI)
-    PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/${EXP}/evidence/fever.db data/${EXP}/models/decomposable_attention.tar.gz data/${EXP}/claim/test.sentences.p5.s5.jsonl  --log logs/decomposable_attention.test.log
+    PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/evidence/fever.db data/models/decomposable_attention.tar.gz data/claim/test.sentences.p5.s5.jsonl  --log logs/decomposable_attention.test.log
     ```
 
 ### Trouble shooting for jp
