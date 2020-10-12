@@ -70,17 +70,17 @@ PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/fever/fever.db data/mod
 - オリジナルコンテナ内で実行
 
     ```
-    # Train DA
+    # Train NLI Model
     # 以降 allennlp==0.4.1 でエラー発生のため `sheffieldnlp/fever-baselines(fever-naacl-2018)` を利用
     export CUDA_DEVICE=-1
     PYTHONPATH=src python src/scripts/rte/da/train_da.py data/evidence/fever.db config/fever_nn_ora_sent_kurohashi.json logs/da_nn_sent_kurohashi --cuda-device $CUDA_DEVICE
     mkdir -p data/models
     cp logs/da_nn_sent_kurohashi/model.tar.gz data/models/decomposable_attention.tar.gz
     
-    # Predict
+    # IR
     PYTHONPATH=src python src/scripts/retrieval/ir.py --db data/evidence/fever.db --model data/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz --in-file data/claim/raw/test.jsonl --out-file data/claim/test.sentences.p5.s5.jsonl --max-page 5 --max-sent 5
     
-    # RTE(NLI)
+    # NLI Prediction
     PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/evidence/fever.db data/models/decomposable_attention.tar.gz data/claim/test.sentences.p5.s5.jsonl  --log logs/decomposable_attention.test.log
     ```
 
