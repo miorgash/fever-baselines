@@ -17,16 +17,16 @@ PYTHONPATH=src python src/scripts/retrieval/document/batch_ir_ns.py --model data
 
 # Train DA
 export CUDA_DEVICE=-1
-PYTHONPATH=src python src/scripts/rte/da/train_da.py data/fever/fever.db config/fever_nn_ora_sent.json logs/da_nn_sent --cuda-device $CUDA_DEVICE
+PYTHONPATH=src python src/scripts/rte/da/train_da.py data/fever/evidence.db config/fever_nn_ora_sent.json logs/da_nn_sent --cuda-device $CUDA_DEVICE
 mkdir -p data/models
 cp logs/da_nn_sent/model.tar.gz data/models/decomposable_attention.tar.gz
 
 # Predict
 # IR
-PYTHONPATH=src python src/scripts/retrieval/ir.py --db data/fever/fever.db --model data/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz --in-file data/fever-data/minimum-test.jsonl --out-file data/fever/minimum-test.sentences.p5.s5.jsonl --max-page 5 --max-sent 5
+PYTHONPATH=src python src/scripts/retrieval/ir.py --db data/fever/evidence.db --model data/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz --in-file data/fever-data/minimum-test.jsonl --out-file data/fever/minimum-test.sentences.p5.s5.jsonl --max-page 5 --max-sent 5
 
 # RTE(NLI)
-PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/fever/fever.db data/models/decomposable_attention.tar.gz data/fever/minimum-test.sentences.p5.s5.jsonl  --log logs/decomposable_attention.test.log
+PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/fever/evidence.db data/models/decomposable_attention.tar.gz data/fever/minimum-test.sentences.p5.s5.jsonl  --log logs/decomposable_attention.test.log
 ```
 
 ## Execution(jp)
@@ -41,21 +41,19 @@ PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/fever/fever.db data/mod
 - 自作コンテナ内で実行
 
     ```
-    # File path
+    # IR preprocess
+    # create evidence db
+    PYTHONPATH=src python src/scripts/build_db.py data/evidence/input data/evidence/evidence.db
+    # create evidence tf-idf matrix in sqlite3 db
+    PYTHONPATH=src python src/scripts/build_tfidf.py data/evidence/evidence.db data/index/
     
-    # Train
-    # create db and tf-idf matrix
-    bash scripts/process-wiki.sh
-    # TODO: EXP を $1 で受け取るよう修正
-    
-    # Sampling for train
-    # 出力先ファイルをパラメータで設定できるよう batch_ir_ns を改修済
+    # NLI preprocess; sampling evidences for the "Not Enough Info" claims
     SPLIT=train
     # SPLIT=dev
     PYTHONPATH=src python src/scripts/retrieval/document/batch_ir_ns.py \
         --model data/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz \
         --count 1 \
-        -i data/claim/raw/${SPLIT}.jsonl \
+        -i data/claim/input/${SPLIT}.jsonl \
         -o data/claim/${SPLIT}.ns.pages.p1.jsonl
     
     ```
@@ -64,7 +62,6 @@ PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/fever/fever.db data/mod
 
     ```
     sudo docker run -it --name fever -v fever-data:/fever/data -v fever-config:/fever/config sheffieldnlp/fever-baselines
-    # Todo: データコンテナを experiment ごとに作成．それをマウントする experiment ごとのコンテナも作成．
     ```
 
 - オリジナルコンテナ内で実行
@@ -73,15 +70,15 @@ PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/fever/fever.db data/mod
     # Train NLI Model
     # 以降 allennlp==0.4.1 でエラー発生のため `sheffieldnlp/fever-baselines(fever-naacl-2018)` を利用
     export CUDA_DEVICE=-1
-    PYTHONPATH=src python src/scripts/rte/da/train_da.py data/evidence/fever.db config/fever_nn_ora_sent_kurohashi.json logs/da_nn_sent_kurohashi --cuda-device $CUDA_DEVICE
+    PYTHONPATH=src python src/scripts/rte/da/train_da.py data/evidence/evidence.db config/fever_nn_ora_sent_kurohashi.json logs/da_nn_sent_kurohashi --cuda-device $CUDA_DEVICE
     mkdir -p data/models
     cp logs/da_nn_sent_kurohashi/model.tar.gz data/models/decomposable_attention.tar.gz
     
     # IR
-    PYTHONPATH=src python src/scripts/retrieval/ir.py --db data/evidence/fever.db --model data/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz --in-file data/claim/raw/test.jsonl --out-file data/claim/test.sentences.p5.s5.jsonl --max-page 5 --max-sent 5
+    PYTHONPATH=src python src/scripts/retrieval/ir.py --db data/evidence/evidence.db --model data/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz --in-file data/claim/raw/test.jsonl --out-file data/claim/test.sentences.p5.s5.jsonl --max-page 5 --max-sent 5
     
     # NLI Prediction
-    PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/evidence/fever.db data/models/decomposable_attention.tar.gz data/claim/test.sentences.p5.s5.jsonl  --log logs/decomposable_attention.test.log
+    PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/evidence/evidence.db data/models/decomposable_attention.tar.gz data/claim/test.sentences.p5.s5.jsonl  --log logs/decomposable_attention.test.log
     ```
 
 ### Trouble shooting for jp
@@ -96,7 +93,7 @@ PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/fever/fever.db data/mod
 # JSON の設定で patience を変更すれば OK
 
 # Predict
-# IR: fever.db のテキストにおいて lines の区切り以外の箇所で \n が入っていると Index エラーが発生する．
+# IR: evidence.db のテキストにおいて lines の区切り以外の箇所で \n が入っていると Index エラーが発生する．
 ```
 
 # Files
@@ -216,7 +213,7 @@ Sample training data for the NotEnoughInfo class. There are two sampling methods
 Or random sampling
 
     #Using random sampling method
-    PYTHONPATH=src python src/scripts/dataset/neg_sample_evidence.py data/fever/fever.db
+    PYTHONPATH=src python src/scripts/dataset/neg_sample_evidence.py data/fever/evidence.db
     
 ## Training
 
@@ -240,14 +237,14 @@ Train the Decomposable Attention model
 Then either train the model with Nearest-Page Sampling for the NEI class 
 
     # Using nearest neighbor sampling method for NotEnoughInfo class (better)
-    PYTHONPATH=src python src/scripts/rte/da/train_da.py data/fever/fever.db config/fever_nn_ora_sent.json logs/da_nn_sent --cuda-device $CUDA_DEVICE
+    PYTHONPATH=src python src/scripts/rte/da/train_da.py data/fever/evidence.db config/fever_nn_ora_sent.json logs/da_nn_sent --cuda-device $CUDA_DEVICE
     mkdir -p data/models
     cp logs/da_nn_sent/model.tar.gz data/models/decomposable_attention.tar.gz
     
 Or with Random Sampling for the NEI class
 
     # Using random sampled data for NotEnoughInfo (worse)
-    PYTHONPATH=src python src/scripts/rte/da/train_da.py data/fever/fever.db config/fever_rs_ora_sent.json logs/da_rs_sent --cuda-device $CUDA_DEVICE
+    PYTHONPATH=src python src/scripts/rte/da/train_da.py data/fever/evidence.db config/fever_rs_ora_sent.json logs/da_rs_sent --cuda-device $CUDA_DEVICE
     mkdir -p data/models
     cp logs/da_rs_sent/model.tar.gz data/models/decomposable_attention.tar.gz
 
@@ -267,7 +264,7 @@ These instructions are for the decomposable attention model. The MLP model can b
     
 Run the oracle evaluation for the Decomposable Attention model on the dev set (requires sampling the NEI class for the dev dataset - see [Data Preparation](#data-preparation))
     
-    PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/fever/fever.db data/models/decomposable_attention.tar.gz data/fever/dev.ns.pages.p1.jsonl
+    PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/fever/evidence.db data/models/decomposable_attention.tar.gz data/fever/dev.ns.pages.p1.jsonl
     
 
 ### Evidence Retrieval Evaluation:
@@ -275,18 +272,18 @@ Run the oracle evaluation for the Decomposable Attention model on the dev set (r
 First retrieve the evidence for the dev/test sets:
 
     #Dev
-    PYTHONPATH=src python src/scripts/retrieval/ir.py --db data/fever/fever.db --model data/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz --in-file data/fever-data/dev.jsonl --out-file data/fever/dev.sentences.p5.s5.jsonl --max-page 5 --max-sent 5
+    PYTHONPATH=src python src/scripts/retrieval/ir.py --db data/fever/evidence.db --model data/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz --in-file data/fever-data/dev.jsonl --out-file data/fever/dev.sentences.p5.s5.jsonl --max-page 5 --max-sent 5
     
     #Test
-    PYTHONPATH=src python src/scripts/retrieval/ir.py --db data/fever/fever.db --model data/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz --in-file data/fever-data/test.jsonl --out-file data/fever/test.sentences.p5.s5.jsonl --max-page 5 --max-sent 5
+    PYTHONPATH=src python src/scripts/retrieval/ir.py --db data/fever/evidence.db --model data/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz --in-file data/fever-data/test.jsonl --out-file data/fever/test.sentences.p5.s5.jsonl --max-page 5 --max-sent 5
 
 Then run the model:
     
     #Dev
-    PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/fever/fever.db data/models/decomposable_attention.tar.gz data/fever/dev.sentences.p5.s5.jsonl  --log data/decomposable_attention.dev.log
+    PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/fever/evidence.db data/models/decomposable_attention.tar.gz data/fever/dev.sentences.p5.s5.jsonl  --log data/decomposable_attention.dev.log
     
     #Test
-    PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/fever/fever.db data/models/decomposable_attention.tar.gz data/fever/test.sentences.p5.s5.jsonl  --log logs/decomposable_attention.test.log
+    PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/fever/evidence.db data/models/decomposable_attention.tar.gz data/fever/test.sentences.p5.s5.jsonl  --log logs/decomposable_attention.test.log
 
 
 ## Scoring
