@@ -63,7 +63,7 @@ PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/fever/fever.db data/mod
 - オリジナルコンテナを起動
 
     ```
-    sudo docker run -it --name fever -v fever-data:/fever/data sheffieldnlp/fever-baselines
+    sudo docker run -it --name fever -v fever-data:/fever/data -v fever-config:/fever/config sheffieldnlp/fever-baselines
     # Todo: データコンテナを experiment ごとに作成．それをマウントする experiment ごとのコンテナも作成．
     ```
 
