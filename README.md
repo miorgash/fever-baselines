@@ -1,35 +1,4 @@
-# Commands
-## Execution(english)
-
-```
-sudo docker run -it --name fever -v fever-data:/fever/data sheffieldnlp/fever-baselines
-# Todo: データコンテナを experiment ごとに作成．それをマウントする experiment ごとのコンテナも作成．
-```
-
-```
-# Train
-# create db and tf-idf matrix
-bash scripts/process-wiki.sh
-
-# Sampling for train
-PYTHONPATH=src python src/scripts/retrieval/document/batch_ir_ns.py --model data/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz --count 1 --split minimum-train
-PYTHONPATH=src python src/scripts/retrieval/document/batch_ir_ns.py --model data/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz --count 1 --split minimum-dev
-
-# Train DA
-export CUDA_DEVICE=-1
-PYTHONPATH=src python src/scripts/rte/da/train_da.py data/fever/evidence.db config/fever_nn_ora_sent.json logs/da_nn_sent --cuda-device $CUDA_DEVICE
-mkdir -p data/models
-cp logs/da_nn_sent/model.tar.gz data/models/decomposable_attention.tar.gz
-
-# Predict
-# IR
-PYTHONPATH=src python src/scripts/retrieval/ir.py --db data/fever/evidence.db --model data/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz --in-file data/fever-data/minimum-test.jsonl --out-file data/fever/minimum-test.sentences.p5.s5.jsonl --max-page 5 --max-sent 5
-
-# RTE(NLI)
-PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/fever/evidence.db data/models/decomposable_attention.tar.gz data/fever/minimum-test.sentences.p5.s5.jsonl  --log logs/decomposable_attention.test.log
-```
-
-## Execution(jp)
+# Execution(jp)
 
 
 - 自作コンテナ起動
@@ -44,6 +13,7 @@ PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/fever/evidence.db data/
     # IR preprocess
     # create evidence db
     PYTHONPATH=src python src/scripts/build_db.py data/evidence/input data/evidence/evidence.db
+
     # create evidence tf-idf matrix in sqlite3 db
     PYTHONPATH=src python src/scripts/build_tfidf.py data/evidence/evidence.db data/index/
     
@@ -51,7 +21,7 @@ PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/fever/evidence.db data/
     SPLIT=train
     # SPLIT=dev
     PYTHONPATH=src python src/scripts/retrieval/document/batch_ir_ns.py \
-        --model data/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz \
+        --model data/index/evidence-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz \
         --count 1 \
         -i data/claim/input/${SPLIT}.jsonl \
         -o data/claim/${SPLIT}.ns.pages.p1.jsonl
@@ -67,8 +37,7 @@ PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/fever/evidence.db data/
 - オリジナルコンテナ内で実行
 
     ```
-    # Train NLI Model
-    # 以降 allennlp==0.4.1 でエラー発生のため `sheffieldnlp/fever-baselines(fever-naacl-2018)` を利用
+    # Train NLI Model(allennlp==0.4.1 でエラー発生のため `sheffieldnlp/fever-baselines(fever-naacl-2018)` を利用)
     export CUDA_DEVICE=-1
     PYTHONPATH=src python src/scripts/rte/da/train_da.py data/evidence/evidence.db config/fever_nn_ora_sent_kurohashi.json logs/da_nn_sent_kurohashi --cuda-device $CUDA_DEVICE
     mkdir -p data/models
