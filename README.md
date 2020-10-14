@@ -1,54 +1,63 @@
 # Execution(jp)
 
 
-- 自作コンテナ起動
+自作コンテナ起動
 
-    ```
-    docker run -it --name fever-createdb -v fever-data:/fever/data miorgash/fever-baselines:latest
-    ```
+```
+docker run -it --rm --name fever-createdb \
+    -v fever-data:/fever/data \
+    -v fever-config:/fever/config \
+    -v fever-logs:/fever/logs \
+    miorgash/fever-baselines:latest
+```
 
-- 自作コンテナ内で実行
+自作コンテナ内で実行
 
-    ```
-    # IR preprocess
-    # create evidence db
-    PYTHONPATH=src python src/scripts/build_db.py data/evidence/input data/evidence/evidence.db
+```
+# IR preprocess
+# create evidence db
+PYTHONPATH=src python src/scripts/build_db.py data/evidence/input data/evidence/evidence.db
 
-    # create evidence tf-idf matrix in sqlite3 db
-    PYTHONPATH=src python src/scripts/build_tfidf.py data/evidence/evidence.db data/index/
-    
-    # NLI preprocess; sampling evidences for the "Not Enough Info" claims
-    SPLIT=train
-    # SPLIT=dev
-    PYTHONPATH=src python src/scripts/retrieval/document/batch_ir_ns.py \
-        --model data/index/evidence-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz \
-        --count 1 \
-        -i data/claim/input/${SPLIT}.jsonl \
-        -o data/claim/${SPLIT}.ns.pages.p1.jsonl
-    
-    ```
+# create evidence tf-idf matrix in sqlite3 db
+PYTHONPATH=src python src/scripts/build_tfidf.py data/evidence/evidence.db data/index/
 
-- オリジナルコンテナを起動
+# NLI preprocess; sampling evidences for the "Not Enough Info" claims
+SPLIT=train
+# SPLIT=dev
+PYTHONPATH=src python src/scripts/retrieval/document/batch_ir_ns.py \
+    --model data/index/evidence-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz \
+    --count 1 \
+    -i data/claim/input/${SPLIT}.jsonl \
+    -o data/claim/${SPLIT}.ns.pages.p1.jsonl
 
-    ```
-    sudo docker run -it --name fever -v fever-data:/fever/data -v fever-config:/fever/config sheffieldnlp/fever-baselines
-    ```
+```
 
-- オリジナルコンテナ内で実行
+オリジナルコンテナを起動（miorgash/fever-baselines では train\_da.py で allennlp バージョン起因のエラー発生のため）
 
-    ```
-    # Train NLI Model(allennlp==0.4.1 でエラー発生のため `sheffieldnlp/fever-baselines(fever-naacl-2018)` を利用)
-    export CUDA_DEVICE=-1
-    PYTHONPATH=src python src/scripts/rte/da/train_da.py data/evidence/evidence.db config/fever_nn_ora_sent_kurohashi.json logs/da_nn_sent_kurohashi --cuda-device $CUDA_DEVICE
-    mkdir -p data/models
-    cp logs/da_nn_sent_kurohashi/model.tar.gz data/models/decomposable_attention.tar.gz
-    
-    # IR
-    PYTHONPATH=src python src/scripts/retrieval/ir.py --db data/evidence/evidence.db --model data/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz --in-file data/claim/raw/test.jsonl --out-file data/claim/test.sentences.p5.s5.jsonl --max-page 5 --max-sent 5
-    
-    # NLI Prediction
-    PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/evidence/evidence.db data/models/decomposable_attention.tar.gz data/claim/test.sentences.p5.s5.jsonl  --log logs/decomposable_attention.test.log
-    ```
+```
+sudo docker run -it --rm --name fever \
+    -v fever-data:/fever/data \
+    -v fever-config:/fever/config \
+    -v fever-logs:/fever/logs \
+    --gpus 2,driver=nvidia,capabiries=compute \
+    sheffieldnlp/fever-baselines
+```
+
+オリジナルコンテナ内で実行
+
+```
+# Train NLI Model
+export CUDA_DEVICE=-1
+export ALLENNLP_LOGS='/fever/logs/fever_nn_ora_sent_yumuseki' # example
+PYTHONPATH=src python src/scripts/rte/da/train_da.py data/evidence/evidence.db config/fever_nn_ora_sent_kurohashi.json $ALLENNLP_LOGS --cuda-device $CUDA_DEVICE
+cp $ALLENNLP_LOGS/model.tar.gz data/models/decomposable_attention.tar.gz
+
+# IR
+PYTHONPATH=src python src/scripts/retrieval/ir.py --db data/evidence/evidence.db --model data/index/fever-tfidf-ngram=2-hash=16777216-tokenizer=simple.npz --in-file data/claim/input/test.jsonl --out-file data/claim/test.sentences.p5.s5.jsonl --max-page 5 --max-sent 5
+
+# NLI test
+PYTHONPATH=src python src/scripts/rte/da/eval_da.py data/evidence/evidence.db data/models/decomposable_attention.tar.gz data/claim/test.sentences.p5.s5.jsonl  --log logs/decomposable_attention.test.log
+```
 
 ### Trouble shooting for jp
 
