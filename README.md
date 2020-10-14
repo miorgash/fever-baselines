@@ -39,7 +39,7 @@ sudo docker run -it --rm --name fever \
     -v fever-data:/fever/data \
     -v fever-config:/fever/config \
     -v fever-logs:/fever/logs \
-    --gpus 2,driver=nvidia,capabiries=compute \
+    --gpus all \
     sheffieldnlp/fever-baselines
 ```
 
